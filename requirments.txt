@@ -1,8 +1,8 @@
-streamlit
+numpy
+pandas
 scikit-learn
 nltk
-pandas
-numpy
+
 wordcloud
-tqdm
-pickle5
+matplotlib
+streamlit
