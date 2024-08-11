@@ -1,57 +1,34 @@
-from flask import Flask, request, jsonify, render_template
+import streamlit as st
 import pickle
-import re
-from nltk.corpus import stopwords
-import pandas as pd 
+import numpy as np
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
 
-# Load the pre-trained model and vectorizer
+# Load the saved model and vectorizer
 with open('model.pkl', 'rb') as model_file:
     model = pickle.load(model_file)
 
 with open('vectorizer.pkl', 'rb') as vectorizer_file:
     vectorizer = pickle.load(vectorizer_file)
 
-def preprocess_text(text_data):
-    preprocessed_text = []
+def predict_news(text):
+    # Preprocess and vectorize the input text
+    text_vectorized = vectorizer.transform([text])
+    # Predict using the loaded model
+    prediction = model.predict(text_vectorized)
+    return prediction[0]
 
-    for sentence in text_data:
-        if isinstance(sentence, str):  # Ensure the item is a string
-            # Remove punctuation
-            sentence = re.sub(r'[^\w\s]', '', sentence)
-            # Tokenize, convert to lowercase, and remove stopwords
-            preprocessed_sentence = ' '.join(token.lower()
-                                             for token in sentence.split(' ')
-                                             if token.lower() not in stopwords.words('english'))
-            preprocessed_text.append(preprocessed_sentence)
+# Streamlit app UI
+st.title("Fake News Detection")
+
+user_input = st.text_area("Enter news text here:")
+if st.button("Predict"):
+    if user_input:
+        prediction = predict_news(user_input)
+        if prediction == 1:
+            st.write("The news is **FAKE**.")
         else:
-            # Handle non-string items
-            preprocessed_text.append('')
-
-    return preprocessed_text
-
-# Initialize Flask app
-app = Flask(__name__)
-
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-# Define the prediction route
-@app.route('/predict', methods=['POST'])
-def predict():
-    # Get the news text from the request
-    news_text = request.form['news']
-    # preprocess the news text
-    news_text = pd.Series(preprocess_text([news_text]))
-    news_text = vectorizer.transform(news_text)
-    prediction = model.predict(news_text)
-    if(prediction[0]==1):
-        result = 'Real'
+            st.write("The news is **REAL**.")
     else:
-        result = 'Fake'
+        st.write("Please enter some text to predict.")
 
-    # Render the template with the prediction result and class
-    return render_template('index.html', prediction_text=f'The news is {result}.')
-
-if __name__ == '__main__':
-    app.run(debug=True)
